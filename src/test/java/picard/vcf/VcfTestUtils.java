@@ -39,19 +39,32 @@ public class VcfTestUtils {
         return out;
     }
 
-    /**
-     * This method makes a copy of the input VCF and creates an index file for it in the same location.
-     * This is done so that we don't need to store the index file in the same repo
-     * The copy of the input is done so that it and its index are in the same directory which is typically required.
-     * @param vcfFile the vcf file to index
-     * @return File a vcf file (index file is created in same path).
-     */
     public static File createTemporaryIndexedVcfFromInput(final File vcfFile, final String tempFilePrefix) throws IOException {
+        return createTemporaryIndexedVcfFromInput(vcfFile, tempFilePrefix, null);
+    }
+
+        /**
+         * This method makes a copy of the input VCF and creates an index file for it in the same location.
+         * This is done so that we don't need to store the index file in the same repo
+         * The copy of the input is done so that it and its index are in the same directory which is typically required.
+         * @param vcfFile the vcf file to index
+         * @return File a vcf file (index file is created in same path).
+         */
+    public static File createTemporaryIndexedVcfFromInput(final File vcfFile, final String tempFilePrefix, final String suffix) throws IOException {
         final String extension;
 
-        if (vcfFile.getAbsolutePath().endsWith(".vcf") ) extension = ".vcf";
-        else if (vcfFile.getAbsolutePath().endsWith(".vcf.gz") ) extension = ".vcf.gz";
-        else throw new IllegalArgumentException("couldn't find a .vcf or .vcf.gz ending for input file " + vcfFile.getAbsolutePath());
+        if (suffix != null) {
+            extension = suffix;
+        } else if (vcfFile.getAbsolutePath().endsWith(".vcf") ) {
+            extension = ".vcf";
+        } else if (vcfFile.getAbsolutePath().endsWith(".vcf.gz") ) {
+            extension = ".vcf.gz";
+        } else {
+            extension = "nope!";
+        }
+
+        if (!extension.equals(".vcf") && !extension.equals(".vcf.gz"))
+            throw new IllegalArgumentException("couldn't find a .vcf or .vcf.gz ending for input file " + vcfFile.getAbsolutePath());
 
         File output = createTemporaryIndexedVcfFile(tempFilePrefix, extension);
 
