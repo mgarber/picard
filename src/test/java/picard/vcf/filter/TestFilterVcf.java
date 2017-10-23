@@ -58,7 +58,7 @@ public class TestFilterVcf {
 
 	@Test
 	public void testJavaScript() throws Exception {
-        final File out = VcfTestUtils.createTemporaryIndexedVcfFile("filterVcfTestJS.", ".vcf");
+        final File out = VcfTestUtils.createTemporaryIndexedFile("filterVcfTestJS.", ".vcf");
 		final FilterVcf filterer = new FilterVcf();
 		filterer.INPUT = INPUT;
 		filterer.OUTPUT = out;
@@ -158,7 +158,7 @@ public class TestFilterVcf {
 
     /** Utility method that takes a a VCF and a set of parameters and filters the VCF. */
     private File testFiltering(final File vcf, final String outputExtension, final double minAb, final int minDp, final int minGq, final double maxFs) throws Exception {
-        final File out = VcfTestUtils.createTemporaryIndexedVcfFile("filterVcfTest.", outputExtension);
+        final File out = VcfTestUtils.createTemporaryIndexedFile("filterVcfTest.", outputExtension);
 
         final FilterVcf filterer = new FilterVcf();
         filterer.CREATE_INDEX = true;

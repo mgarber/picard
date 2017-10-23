@@ -13,8 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.testng.Assert.*;
-
 /**
  * Created by farjoun on 10/22/17.
  */
@@ -65,7 +63,7 @@ public class GatherVcfsTest extends CommandLineProgramTest {
 
         final List<String> args = new ArrayList<>();
 
-        final File output = VcfTestUtils.createTemporaryIndexedVcfFile("result", expectedOutput.getAbsolutePath().endsWith(".vcf") ? ".vcf" : ".vcf.gz");
+        final File output = VcfTestUtils.createTemporaryIndexedFile("result", expectedOutput.getAbsolutePath().endsWith(".vcf") ? ".vcf" : ".vcf.gz");
 
         inputFiles.forEach(f -> args.add("INPUT=" + f.getAbsolutePath()));
         args.add("OUTPUT=" + output.getAbsolutePath());

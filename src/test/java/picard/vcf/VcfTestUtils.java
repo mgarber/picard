@@ -16,13 +16,13 @@ import java.util.EnumSet;
 public class VcfTestUtils {
 
     /**
-     * This method creates a temporary VCF file and it's appropriately named index file, and will delete them on exit.
+     * This method creates a temporary VCF or Bam file and it's appropriately named index file, and will delete them on exit.
      * @param prefix - The prefix string to be used in generating the file's name; must be at least three characters long
      * @param suffix - The suffix string to be used in generating the file's name; may be null, in which case the suffix ".tmp" will be used
-     * @return A File object referencing the newly created temporary VCF file
+     * @return A File object referencing the newly created temporary file
      * @throws IOException - if a file could not be created.
      */
-    public static File createTemporaryIndexedVcfFile(final String prefix, final String suffix) throws IOException {
+    public static File createTemporaryIndexedFile(final String prefix, final String suffix) throws IOException {
         final File out = File.createTempFile(prefix, suffix);
         out.deleteOnExit();
         String indexFileExtension = null;
@@ -31,6 +31,9 @@ public class VcfTestUtils {
         }
         else if (suffix.endsWith("vcf")) {
             indexFileExtension = ".idx";
+        }
+        else if (suffix.endsWith(".bam")) {
+            indexFileExtension = ".bai";
         }
         if (indexFileExtension != null) {
             final File indexOut = new File(out.getAbsolutePath() + indexFileExtension);
@@ -66,7 +69,7 @@ public class VcfTestUtils {
         if (!extension.equals(".vcf") && !extension.equals(".vcf.gz"))
             throw new IllegalArgumentException("couldn't find a .vcf or .vcf.gz ending for input file " + vcfFile.getAbsolutePath());
 
-        File output = createTemporaryIndexedVcfFile(tempFilePrefix, extension);
+        File output = createTemporaryIndexedFile(tempFilePrefix, extension);
 
         final VCFFileReader in = new VCFFileReader(vcfFile, false);
         final VCFHeader header = in.getFileHeader();
