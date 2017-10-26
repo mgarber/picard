@@ -48,7 +48,7 @@ public class IntervalListTools extends CommandLineProgram {
             " values tab-separated: " +
             "<pre>" +
             "     -Sequence name (SN) <br />" +
-            "     -Start position (1-based)** <br />" +
+            "     -Start position (1-based) <br />" +
             "     -End position (1-based, end inclusive) <br />" +
             "     -Strand (either + or -) <br />" +
             "     -Interval name (ideally unique names for intervals)" +
@@ -58,7 +58,8 @@ public class IntervalListTools extends CommandLineProgram {
             "<pre>" +
             "java -jar picard.jar IntervalListTools \\<br />" +
             "      I=input.interval_list \\<br />" +
-            "      SI=input_2.interval_list \\<br />" +
+            "      I=input_2.interval_list \\<br />" +
+            "      ACTION=CONCAT \\<br />" +
             "      O=new.interval_list" +
             "</pre>" +
             "<hr />";
