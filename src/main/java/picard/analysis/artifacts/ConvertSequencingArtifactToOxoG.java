@@ -25,6 +25,7 @@ import java.util.Set;
         oneLineSummary = ConvertSequencingArtifactToOxoG.USAGE_SUMMARY,
         programGroup = Metrics.class
 )
+
 @DocumentedFeature
 public class ConvertSequencingArtifactToOxoG extends CommandLineProgram {
 static final String USAGE_SUMMARY = "Extract OxoG metrics from generalized artifacts metrics.  ";
@@ -60,11 +61,6 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
             doc = "Basename for output OxoG metrics. Defaults to same basename as input metrics",
             optional = true)
     public File OUTPUT_BASE;
-
-    // Stock main method
-    public static void main(final String[] args) {
-        new ConvertSequencingArtifactToOxoG().instanceMainWithExit(args);
-    }
 
     @Override
     protected int doWork() {

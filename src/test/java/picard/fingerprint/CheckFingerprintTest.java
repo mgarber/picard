@@ -5,7 +5,6 @@ import org.testng.annotations.Test;
 import picard.cmdline.CommandLineProgramTest;
 import picard.vcf.SamTestUtils;
 import picard.vcf.VcfTestUtils;
-import sun.nio.ch.IOUtil;
 
 import java.io.File;
 import java.io.IOException;
