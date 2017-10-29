@@ -47,39 +47,39 @@ public class TestFilterVcf {
     private final File BAD_INPUT = new File("testdata/picard/vcf/filter/testFilteringNoSeqDictionary.vcf");
 
     /* write content of javascript in the returned file */
-	private File quickJavascriptFilter(String content) throws Exception {
-		final File out = File.createTempFile("jsfilter", ".js");
-		out.deleteOnExit();
-		try (final PrintWriter pw = new PrintWriter(out)) {
-			pw.println(content);
-		}
-		return out;
-	}
+    private File quickJavascriptFilter(String content) throws Exception {
+        final File out = File.createTempFile("jsfilter", ".js");
+        out.deleteOnExit();
+        try (final PrintWriter pw = new PrintWriter(out)) {
+            pw.println(content);
+        }
+        return out;
+    }
 
-	@Test
-	public void testJavaScript() throws Exception {
+    @Test
+    public void testJavaScript() throws Exception {
         final File out = VcfTestUtils.createTemporaryIndexedFile("filterVcfTestJS.", ".vcf");
-		final FilterVcf filterer = new FilterVcf();
-		filterer.INPUT = INPUT;
-		filterer.OUTPUT = out;
-		filterer.JAVASCRIPT_FILE = quickJavascriptFilter("variant.getStart()%5 != 0");
+        final FilterVcf filterer = new FilterVcf();
+        filterer.INPUT = INPUT;
+        filterer.OUTPUT = out;
+        filterer.JAVASCRIPT_FILE = quickJavascriptFilter("variant.getStart()%5 != 0");
 
-		final int retval = filterer.doWork();
-		Assert.assertEquals(retval, 0);
+        final int retval = filterer.doWork();
+        Assert.assertEquals(retval, 0);
 
-		//count the number of reads
-		final int expectedNumber = 4;
-		int count=0;
-		VCFFileReader in = new VCFFileReader(filterer.OUTPUT, false);
-		CloseableIterator<VariantContext> iter = in.iterator();
-		while(iter.hasNext()) {
-			final VariantContext ctx = iter.next();
-			count += (ctx.isFiltered()?1:0);
-		}
-		iter.close();
-		in.close();
-		Assert.assertEquals(count, expectedNumber);
-	}
+        //count the number of reads
+        final int expectedNumber = 4;
+        int count = 0;
+        VCFFileReader in = new VCFFileReader(filterer.OUTPUT, false);
+        CloseableIterator<VariantContext> iter = in.iterator();
+        while (iter.hasNext()) {
+            final VariantContext ctx = iter.next();
+            count += (ctx.isFiltered() ? 1 : 0);
+        }
+        iter.close();
+        in.close();
+        Assert.assertEquals(count, expectedNumber);
+    }
 
     /** Returns a sorted copy of the supplied set, for safer comparison. */
     <T extends Comparable> SortedSet<T> sorted(Set<T> in) { return new TreeSet<T>(in); }
