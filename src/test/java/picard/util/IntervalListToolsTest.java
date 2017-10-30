@@ -168,6 +168,8 @@ public class IntervalListToolsTest extends CommandLineProgramTest {
 
         final String[] files = ilOutDir.list();
         Assert.assertNotNull(files);
+        Arrays.sort(files);
+
         Assert.assertEquals(files.length, tc.expectedScatter.size());
 
         final Iterator<IntervalList> intervals = tc.expectedScatter.iterator();
