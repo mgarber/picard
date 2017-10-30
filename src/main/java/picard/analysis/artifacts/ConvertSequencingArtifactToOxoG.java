@@ -2,6 +2,7 @@ package picard.analysis.artifacts;
 
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.util.IOUtil;
+import htsjdk.samtools.util.QualityUtil;
 import htsjdk.samtools.util.SequenceUtil;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.cmdline.CommandLineProgram;
@@ -19,6 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static java.lang.Math.log10;
 
 @CommandLineProgramProperties(
         summary = ConvertSequencingArtifactToOxoG.USAGE_SUMMARY + ConvertSequencingArtifactToOxoG.USAGE_DETAILS,
@@ -83,8 +86,8 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
          * Determine output fields. Just copy these from the input for now.
          */
         final String oxogSampleAlias = preAdapterDetailMetricsList.get(0).SAMPLE_ALIAS;
-        final Set<String> oxogLibraries = new HashSet<String>();
-        final Set<String> oxogContexts = new HashSet<String>();
+        final Set<String> oxogLibraries = new HashSet<>();
+        final Set<String> oxogContexts = new HashSet<>();
         for (final PreAdapterDetailMetrics preAdapter : preAdapterDetailMetricsList) {
             oxogLibraries.add(preAdapter.LIBRARY);
             // Remember that OxoG only reports on the 'C' contexts
@@ -98,11 +101,11 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
          * Remember, we only care about two transitions - C>A and G>T! Thus, for each context we
          * will only store one metric.
          */
-        final Map<String, Map<String, PreAdapterDetailMetrics>> preAdapterDetailMetricsMap = new HashMap<String, Map<String, PreAdapterDetailMetrics>>();
-        final Map<String, Map<String, BaitBiasDetailMetrics>> baitBiasDetailMetricsMap = new HashMap<String, Map<String, BaitBiasDetailMetrics>>();
+        final Map<String, Map<String, PreAdapterDetailMetrics>> preAdapterDetailMetricsMap = new HashMap<>();
+        final Map<String, Map<String, BaitBiasDetailMetrics>> baitBiasDetailMetricsMap = new HashMap<>();
         for (final String library : oxogLibraries) {
-            final Map<String, PreAdapterDetailMetrics> contextsToPreAdapter = new HashMap<String, PreAdapterDetailMetrics>();
-            final Map<String, BaitBiasDetailMetrics> contextsToBaitBias = new HashMap<String, BaitBiasDetailMetrics>();
+            final Map<String, PreAdapterDetailMetrics> contextsToPreAdapter = new HashMap<>();
+            final Map<String, BaitBiasDetailMetrics> contextsToBaitBias = new HashMap<>();
             preAdapterDetailMetricsMap.put(library, contextsToPreAdapter);
             baitBiasDetailMetricsMap.put(library, contextsToBaitBias);
         }
@@ -122,7 +125,7 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
         /**
          * Create the OxoG metrics
          */
-        final List<CpcgMetrics> oxogMetrics = new ArrayList<CpcgMetrics>();
+        final List<CpcgMetrics> oxogMetrics = new ArrayList<>();
         for (final String library : oxogLibraries) {
             for (final String context : oxogContexts) {
                 final CpcgMetrics m = new CpcgMetrics();
@@ -147,7 +150,6 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
 
                 final PreAdapterDetailMetrics preAdapter = preAdapterDetailMetricsMap.get(library).get(SequenceUtil.reverseComplement(context));
                 final BaitBiasDetailMetrics baitBiasFwd = baitBiasDetailMetricsMap.get(library).get(context);
-                final BaitBiasDetailMetrics baitBiasRev = baitBiasDetailMetricsMap.get(library).get(SequenceUtil.reverseComplement(context));
 
                 // extract fields from PreAdapterDetailMetrics
                 m.TOTAL_BASES = preAdapter.PRO_REF_BASES + preAdapter.PRO_ALT_BASES + preAdapter.CON_REF_BASES + preAdapter.CON_ALT_BASES;
@@ -156,18 +158,25 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
                 m.REF_OXO_BASES = preAdapter.PRO_REF_BASES;
                 m.ALT_NONOXO_BASES = preAdapter.CON_ALT_BASES;
                 m.ALT_OXO_BASES = preAdapter.PRO_ALT_BASES;
-                m.OXIDATION_ERROR_RATE = preAdapter.ERROR_RATE;
-                m.OXIDATION_Q = preAdapter.QSCORE;
+
+                // mimicking the calculation in oxoG
+                m.OXIDATION_ERROR_RATE = Math.max(m.ALT_OXO_BASES - m.ALT_NONOXO_BASES, 1) / (double) m.TOTAL_BASES;
+                m.OXIDATION_Q = -10 * log10(m.OXIDATION_ERROR_RATE);
 
                 // extract fields from BaitBiasDetailMetrics
                 m.C_REF_REF_BASES = baitBiasFwd.FWD_CXT_REF_BASES;
                 m.G_REF_REF_BASES = baitBiasFwd.REV_CXT_REF_BASES;
                 m.C_REF_ALT_BASES = baitBiasFwd.FWD_CXT_ALT_BASES;
                 m.G_REF_ALT_BASES = baitBiasFwd.REV_CXT_ALT_BASES;
-                m.C_REF_OXO_ERROR_RATE = baitBiasFwd.ERROR_RATE;
-                m.C_REF_OXO_Q = baitBiasFwd.QSCORE;
-                m.G_REF_OXO_ERROR_RATE = baitBiasRev.ERROR_RATE;
-                m.G_REF_OXO_Q = baitBiasRev.QSCORE;
+
+                final double cRefErrorRate = m.C_REF_ALT_BASES / (double) (m.C_REF_ALT_BASES + m.C_REF_REF_BASES);
+                final double gRefErrorRate = m.G_REF_ALT_BASES / (double) (m.G_REF_ALT_BASES + m.G_REF_REF_BASES);
+
+                // mimicking the calculation in oxoG
+                m.C_REF_OXO_ERROR_RATE = Math.max(cRefErrorRate - gRefErrorRate, 1e-10);
+                m.G_REF_OXO_ERROR_RATE = Math.max(gRefErrorRate - cRefErrorRate, 1e-10);
+                m.C_REF_OXO_Q = -10 * log10(m.C_REF_OXO_ERROR_RATE);
+                m.G_REF_OXO_Q = -10 * log10(m.G_REF_OXO_ERROR_RATE);
 
                 // add it
                 oxogMetrics.add(m);

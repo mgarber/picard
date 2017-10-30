@@ -35,14 +35,7 @@ import htsjdk.samtools.filter.SamRecordFilter;
 import htsjdk.samtools.metrics.MetricBase;
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileWalker;
-import htsjdk.samtools.util.CloserUtil;
-import htsjdk.samtools.util.IOUtil;
-import htsjdk.samtools.util.IntervalList;
-import htsjdk.samtools.util.ListMap;
-import htsjdk.samtools.util.Log;
-import htsjdk.samtools.util.SamLocusIterator;
-import htsjdk.samtools.util.SequenceUtil;
-import htsjdk.samtools.util.StringUtil;
+import htsjdk.samtools.util.*;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.PicardException;
@@ -59,6 +52,7 @@ import java.util.List;
 import java.util.Set;
 
 import static htsjdk.samtools.util.CodeUtil.getOrElse;
+import static htsjdk.samtools.util.SequenceUtil.C;
 import static htsjdk.samtools.util.SequenceUtil.generateAllKmers;
 import static java.lang.Math.log10;
 import static picard.cmdline.StandardOptionDefinitions.MINIMUM_MAPPING_QUALITY_SHORT_NAME;
@@ -257,7 +251,7 @@ public class CollectOxoGMetrics extends CommandLineProgram {
         final Set<String> libraries = new HashSet<>();
         
         if (in.getFileHeader().getReadGroups().isEmpty()) {
-        	throw new PicardException("This analysis requires a read group entry in the alignment file header");
+            throw new PicardException("This analysis requires a read group entry in the alignment file header");
         }
         
         for (final SAMReadGroupRecord rec : in.getFileHeader().getReadGroups()) {
@@ -313,7 +307,7 @@ public class CollectOxoGMetrics extends CommandLineProgram {
 
             // Skip sites at the end of chromosomes 
             final byte[] bases = refWalker.get(info.getSequenceIndex()).getBases();
-            if (pos < 3 || pos > bases.length - 3) continue;
+            if (pos <= CONTEXT_SIZE|| pos > bases.length - CONTEXT_SIZE) continue;
 
             // Skip non C-G bases
             final byte base = StringUtil.toUpperCase(bases[index]);
