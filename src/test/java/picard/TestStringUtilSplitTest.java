@@ -13,6 +13,6 @@ public class TestStringUtilSplitTest {
     public void TestTestStringUtilSplit() {
 
         TestStringUtilSplit tester = new TestStringUtilSplit();
-        Assert.assertTrue(tester.run() < 0, "We should stop using StringUtil.split as the StringTokenizer is faster");
+        Assert.assertTrue(tester.run() < 0.1, "We should stop using StringUtil.split as the StringTokenizer is 10% faster");
     }
 }

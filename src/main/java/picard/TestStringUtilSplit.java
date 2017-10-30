@@ -16,7 +16,7 @@ public class TestStringUtilSplit {
         new TestStringUtilSplit().run();
     }
 
-    public long run() {
+    public double run() {
         final int ITERATIONS = 1000000;
         final String[] fields = new String[10000];
         final StopWatch watch = new StopWatch();
@@ -43,7 +43,7 @@ public class TestStringUtilSplit {
         watch.stop();
         System.out.println("StringTokenizer took " + watch.getElapsedTime());
         tokenizerTime = watch.getElapsedTime();
-        return tokenizerTime - stringUtilTime;
+        return (tokenizerTime - stringUtilTime + 0D) / stringUtilTime;
     }
 
     public int split(final String s, final String[] tokens, final String token) {

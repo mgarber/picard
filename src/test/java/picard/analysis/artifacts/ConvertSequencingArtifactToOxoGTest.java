@@ -75,7 +75,6 @@ public class ConvertSequencingArtifactToOxoGTest {
                 "SAMPLE_ALIAS", "LIBRARY", "CONTEXT", "TOTAL_BASES", "REF_NONOXO_BASES", "REF_OXO_BASES", "REF_TOTAL_BASES", "ALT_NONOXO_BASES", "ALT_OXO_BASES", "OXIDATION_ERROR_RATE", "OXIDATION_Q", "C_REF_REF_BASES", "G_REF_REF_BASES", "C_REF_ALT_BASES", "G_REF_ALT_BASES", "C_REF_OXO_ERROR_RATE", "C_REF_OXO_Q", "G_REF_OXO_ERROR_RATE", "G_REF_OXO_Q"};
 
         Assert.assertTrue(areMetricsEqual(outputFileOxoG, new File(convertedArtifacts + ".oxog_metrics"), columnToCompare), "Metrics differ");
-
     }
 
     /**
@@ -92,10 +91,9 @@ public class ConvertSequencingArtifactToOxoGTest {
         } catch (FileNotFoundException e) {
             throw new SAMException(e.getMessage(), e);
         }
-
     }
 
-    static private <T extends MetricBase> boolean areMetricsEqual(MetricsFile<T,?> metricFile1, MetricsFile<T,?> metricFile2, final String[] columnsToCompare) throws NoSuchFieldException {
+    private static <T extends MetricBase> boolean areMetricsEqual(MetricsFile<T,?> metricFile1, MetricsFile<T,?> metricFile2, final String[] columnsToCompare) throws NoSuchFieldException {
 
         if (metricFile1.getMetrics().size()!=metricFile2.getMetrics().size())
             return false;
@@ -108,7 +106,6 @@ public class ConvertSequencingArtifactToOxoGTest {
                 return false;
             if (!metricFile2.getMetricsColumnLabels().contains(column))
                 return false;
-
 
             final Field f = firstMetric1.getClass().getField(column);
 
@@ -135,7 +132,4 @@ public class ConvertSequencingArtifactToOxoGTest {
 
         return true;
     }
-
-
-
 }

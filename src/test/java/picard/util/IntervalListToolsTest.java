@@ -19,9 +19,9 @@ import java.util.List;
  */
 public class IntervalListToolsTest extends CommandLineProgramTest {
 
-    final File TEST_DATA_DIR = new File("testdata/picard/util/");
-    final File scatterable = new File(TEST_DATA_DIR, "scatterable.interval_list");
-    final File secondInput = new File(TEST_DATA_DIR, "secondInput.interval_list");
+    private final File TEST_DATA_DIR = new File("testdata/picard/util/");
+    private final File scatterable = new File(TEST_DATA_DIR, "scatterable.interval_list");
+    private final File secondInput = new File(TEST_DATA_DIR, "secondInput.interval_list");
 
     @Override
     public String getCommandLineProgramName() {
@@ -131,20 +131,18 @@ public class IntervalListToolsTest extends CommandLineProgramTest {
         return objects;
     }
 
-    File ilOutDir;
+    private final List<File> dirsToDelete = new ArrayList<>();
 
-    @BeforeMethod
-    void setupDir() {
-        ilOutDir = IOUtil.createTempDir("IntervalListTools", "lists");
-    }
-
-    @AfterMethod
-    void breakDown() {
-        TestUtil.recursiveDelete(ilOutDir);
+    @AfterTest
+    void deleteTempDirs() {
+        dirsToDelete.forEach(TestUtil::recursiveDelete);
     }
 
     @Test(dataProvider = "testScatterTestcases")
     public void testScatter(final IntervalListScattererTest.Testcase tc) throws IOException {
+
+        final File ilOutDir = IOUtil.createTempDir("IntervalListTools", "lists");
+        dirsToDelete.add(ilOutDir);
 
         final IntervalListScatterer scatterer = new IntervalListScatterer(tc.mode);
         final List<IntervalList> scatter = scatterer.scatter(tc.source, tc.scatterWidth);
@@ -156,9 +154,9 @@ public class IntervalListToolsTest extends CommandLineProgramTest {
         args.add("INPUT=" + scatterable);
 
         args.add("SUBDIVISION_MODE=" + tc.mode);
-        if (tc.scatterWidth==1) {
+        if (tc.scatterWidth == 1) {
             final File subDir = new File(ilOutDir, "temp_1_of_1");
-            subDir.mkdir();
+            Assert.assertTrue(subDir.mkdir(), "was unable to create directroy");
             args.add("OUTPUT=" + new File(subDir, "scattered.interval_list"));
 
         } else {
@@ -175,11 +173,10 @@ public class IntervalListToolsTest extends CommandLineProgramTest {
         final Iterator<IntervalList> intervals = tc.expectedScatter.iterator();
 
         for (final String fileName : files) {
-            final IntervalList intervalList = IntervalList.fromFile(new File(new File(ilOutDir, fileName),"scattered.interval_list"));
+            final IntervalList intervalList = IntervalList.fromFile(new File(new File(ilOutDir, fileName), "scattered.interval_list"));
             final IntervalList expected = intervals.next();
 
-            Assert.assertEquals(intervalList.getIntervals(),expected );
+            Assert.assertEquals(intervalList.getIntervals(), expected);
         }
     }
-
 }
