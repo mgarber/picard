@@ -1,11 +1,14 @@
 package picard.fingerprint;
 
+import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import picard.cmdline.CommandLineProgramTest;
 import picard.vcf.SamTestUtils;
 import picard.vcf.VcfTestUtils;
 
+import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -13,11 +16,11 @@ import java.util.*;
 /**
  * Created by farjoun on 10/23/17.
  */
-public class CheckFingerprintTest extends CommandLineProgramTest{
+public class CheckFingerprintTest extends CommandLineProgramTest {
 
     @Override
     public String getCommandLineProgramName() {
-        return this.getClass().getName();
+        return CheckFingerprint.class.getSimpleName();
     }
 
     private final File TEST_DATA_DIR = new File("testdata/picard/fingerprint/");
@@ -39,28 +42,29 @@ public class CheckFingerprintTest extends CommandLineProgramTest{
     private final int NA12892_r1_RGs = 25;
     private final int NA12892_r2_RGs = 26;
 
-    private static File  NA12891_1_vcf;
-    private static File  NA12891_2_vcf;
-    private static File  NA12892_1_vcf;
-    private static File  NA12891_swapped_nonref_g_vcf;
-    private static File  NA12892_2_vcf;
-    private static File  NA12891_named_NA12892_vcf;
-    private static File  NA12891_g_vcf;
-    private static File  NA12892_g_vcf;
-    private static File  NA12892_and_NA123891_vcf;
-    private static File  NA12892_and_NA123891_part1_vcf;
-    private static File  NA12892_and_NA123891_part2_vcf;
-    private static File  NA12892_and_NA123891_part3_vcf;
+    private static File NA12891_1_vcf;
+    private static File NA12891_2_vcf;
+    private static File NA12892_1_vcf;
+    private static File NA12891_swapped_nonref_g_vcf;
+    private static File NA12892_2_vcf;
+    private static File NA12891_named_NA12892_vcf;
+    private static File NA12891_g_vcf;
+    private static File NA12892_g_vcf;
+    private static File NA12892_and_NA123891_vcf;
+    private static File NA12892_and_NA123891_part1_vcf;
+    private static File NA12892_and_NA123891_part2_vcf;
+    private static File NA12892_and_NA123891_part3_vcf;
 
     final File na12891_r1 = new File(TEST_DATA_DIR, "NA12891.over.fingerprints.r1.sam");
     final File na12891_r2 = new File(TEST_DATA_DIR, "NA12891.over.fingerprints.r2.sam");
     final File na12892_r1 = new File(TEST_DATA_DIR, "NA12892.over.fingerprints.r1.sam");
     final File na12892_r2 = new File(TEST_DATA_DIR, "NA12892.over.fingerprints.r1.sam");
     final File na12891_fp = new File(TEST_DATA_DIR, "NA12891.fp.vcf");
-
+    final File na12892_fp = new File(TEST_DATA_DIR, "NA12892.fp.vcf");
 
     private static final Map<CrosscheckMetric.DataType, List<String>> lookupMap = new HashMap<>(4);
 
+    @Test
     @BeforeClass
     public void setup() throws IOException {
         NA12891_r1 = SamTestUtils.createIndexedBam(NA12891_r1_sam, NA12891_r1_sam);
@@ -82,10 +86,9 @@ public class CheckFingerprintTest extends CommandLineProgramTest{
 
         lookupMap.put(CrosscheckMetric.DataType.READGROUP, new ArrayList<>());
         lookupMap.get(CrosscheckMetric.DataType.READGROUP).addAll(Arrays.asList("LEFT_RUN_BARCODE", "LEFT_LANE",
-                "LEFT_MOLECULAR_BARCODE_SEQUENCE","RIGHT_RUN_BARCODE",
+                "LEFT_MOLECULAR_BARCODE_SEQUENCE", "RIGHT_RUN_BARCODE",
                 "RIGHT_LANE", "RIGHT_MOLECULAR_BARCODE_SEQUENCE"));
         lookupMap.get(CrosscheckMetric.DataType.READGROUP).addAll(lookupMap.get(CrosscheckMetric.DataType.LIBRARY));
-
 
         NA12891_1_vcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(new File(TEST_DATA_DIR, "NA12891.vcf"), "fingerprint");
         NA12891_2_vcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(new File(TEST_DATA_DIR, "NA12891.fp.vcf"), "fingerprint");
@@ -100,23 +103,58 @@ public class CheckFingerprintTest extends CommandLineProgramTest{
         NA12892_and_NA123891_part1_vcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(new File(TEST_DATA_DIR, "NA12891andNA12892_part1.vcf"), "fingerprint");
         NA12892_and_NA123891_part2_vcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(new File(TEST_DATA_DIR, "NA12891andNA12892_part2.vcf"), "fingerprint");
         NA12892_and_NA123891_part3_vcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(new File(TEST_DATA_DIR, "NA12891andNA12892_part3.vcf"), "fingerprint");
+    }
+
+    @DataProvider(name = "SamsToFingerprint")
+    Object[][] samsToFingerprint() {
+        return new Object[][]{
+                {NA12891_r1_sam, na12891_fp},
+                {NA12892_r1_sam, na12891_fp},
+        };
+    }
+
+    @DataProvider(name = "vcfsToFingerprint")
+    Object[][] vcfsToFingerprint() {
+        return new Object[][]{
+                {NA12891_named_NA12892_vcf, na12892_fp },
+                {NA12892_1_vcf, na12892_fp},
+        };
+    }
+
+    //TODO: need to add checks for output...
+
+    @Test(dataProvider = "samsToFingerprint")
+    void testCheckFingerprintSam(File file, File genotypes) throws IOException {
+        tester(false, file, genotypes);
 
     }
-    @Test
-    void testCheckFingerprint() throws IOException {
+
+    @Test(dataProvider = "vcfsToFingerprint")
+    void testCheckFingerprintVcf(File file, File genotypes) throws IOException {
+        tester(false, file, genotypes);
+    }
+
+    @Test(dataProvider = "samsToFingerprint")
+    void testCheckFingerprintNoRg(File file, File genotypes) throws IOException {
+        tester(true, file, genotypes);
+    }
+
+    private File tester(boolean ignoreRG, File file, File genotypes) throws IOException {
         final List<String> args = new ArrayList<>();
-        final File outputSummary = File.createTempFile("fingerprint","summary_metrics");
+        final File outputSummary = File.createTempFile("fingerprint", "summary_metrics");
         outputSummary.deleteOnExit();
-        final File outputDetail = File.createTempFile("fingerprint","detail_metrics");
+        final File outputDetail = File.createTempFile("fingerprint", "detail_metrics");
         outputSummary.deleteOnExit();
 
-        args.add("INPUT="+na12891_r1.getAbsolutePath());
-        args.add("G="+na12891_fp.getAbsolutePath());
-        args.add("H="+HAPLOTYPE_MAP.getAbsolutePath());
-        args.add("SUMMARY_OUTPUT="+outputSummary.getAbsolutePath());
-        args.add("DETAIL_OUTPUT="+outputDetail.getAbsolutePath());
+        args.add("INPUT=" + file.getAbsolutePath());
+        args.add("G=" + genotypes.getAbsolutePath());
+        if (ignoreRG) args.add("IGNORE_RG=true");
+        args.add("H=" + HAPLOTYPE_MAP.getAbsolutePath());
+        args.add("SUMMARY_OUTPUT=" + outputSummary.getAbsolutePath());
+        args.add("DETAIL_OUTPUT=" + outputDetail.getAbsolutePath());
 
-        runPicardCommandLine(args);
+        Assert.assertEquals(runPicardCommandLine(args), 0);
+
+        return outputSummary;
     }
-
 }
