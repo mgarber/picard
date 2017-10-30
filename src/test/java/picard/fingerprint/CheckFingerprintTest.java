@@ -8,7 +8,6 @@ import picard.cmdline.CommandLineProgramTest;
 import picard.vcf.SamTestUtils;
 import picard.vcf.VcfTestUtils;
 
-import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -64,7 +63,6 @@ public class CheckFingerprintTest extends CommandLineProgramTest {
 
     private static final Map<CrosscheckMetric.DataType, List<String>> lookupMap = new HashMap<>(4);
 
-    @Test
     @BeforeClass
     public void setup() throws IOException {
         NA12891_r1 = SamTestUtils.createIndexedBam(NA12891_r1_sam, NA12891_r1_sam);
@@ -105,7 +103,7 @@ public class CheckFingerprintTest extends CommandLineProgramTest {
         NA12892_and_NA123891_part3_vcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(new File(TEST_DATA_DIR, "NA12891andNA12892_part3.vcf"), "fingerprint");
     }
 
-    @DataProvider(name = "SamsToFingerprint")
+    @DataProvider(name = "samsToFingerprint")
     Object[][] samsToFingerprint() {
         return new Object[][]{
                 {NA12891_r1_sam, na12891_fp},
