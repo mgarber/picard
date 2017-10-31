@@ -154,14 +154,15 @@ public class IntervalListToolsTest extends CommandLineProgramTest {
         args.add("INPUT=" + scatterable);
 
         args.add("SUBDIVISION_MODE=" + tc.mode);
+
         if (tc.scatterWidth == 1) {
             final File subDir = new File(ilOutDir, "temp_1_of_1");
-            Assert.assertTrue(subDir.mkdir(), "was unable to create directroy");
+            Assert.assertTrue(subDir.mkdir(), "was unable to create directory");
             args.add("OUTPUT=" + new File(subDir, "scattered.interval_list"));
-
         } else {
             args.add("OUTPUT=" + ilOutDir);
         }
+
         args.add("SCATTER_COUNT=" + tc.scatterWidth);
 
         Assert.assertEquals(runPicardCommandLine(args), 0);
