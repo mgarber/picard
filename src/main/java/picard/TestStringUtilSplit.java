@@ -43,7 +43,7 @@ public class TestStringUtilSplit {
         watch.stop();
         System.out.println("StringTokenizer took " + watch.getElapsedTime());
         tokenizerTime = watch.getElapsedTime();
-        return (tokenizerTime - stringUtilTime + 0D) / stringUtilTime;
+        return (tokenizerTime + 0D) / stringUtilTime;
     }
 
     public int split(final String s, final String[] tokens, final String token) {

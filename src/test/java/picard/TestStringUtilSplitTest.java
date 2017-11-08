@@ -9,10 +9,10 @@ import org.testng.annotations.Test;
  */
 public class TestStringUtilSplitTest {
 
-    @Test
+    @Test( invocationCount = 10, successPercentage = 50)
     public void TestTestStringUtilSplit() {
 
         TestStringUtilSplit tester = new TestStringUtilSplit();
-        Assert.assertTrue(tester.run() < 0.1, "We should stop using StringUtil.split as the StringTokenizer is 10% faster");
+        Assert.assertTrue(tester.run() > 0.7, "We should stop using StringUtil.split as the StringTokenizer takes less than 70% of the time");
     }
 }
