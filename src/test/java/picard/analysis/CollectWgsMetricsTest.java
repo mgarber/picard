@@ -212,7 +212,6 @@ public class CollectWgsMetricsTest extends CommandLineProgramTest {
     @Test(dataProvider = "wgsAlgorithm")
     public void testLargeIntervals(final String useFastAlgorithm) throws IOException {
         final File input = new File(TEST_DIR, "forMetrics.sam");
-        input.deleteOnExit();
         final File outfile = File.createTempFile("test", ".wgs_metrics");
         outfile.deleteOnExit();
         final File ref = new File(TEST_DIR, "merger.fasta");
