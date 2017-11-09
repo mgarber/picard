@@ -37,25 +37,19 @@ import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileWalker;
 import htsjdk.samtools.util.*;
 import org.broadinstitute.barclay.argparser.Argument;
+import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.PicardException;
+import htsjdk.samtools.util.SequenceUtil;
 import picard.cmdline.CommandLineProgram;
-import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import picard.cmdline.StandardOptionDefinitions;
 import picard.cmdline.programgroups.Metrics;
 import picard.util.DbSnpBitSetUtil;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.lang.Math;
 
-import static htsjdk.samtools.util.CodeUtil.getOrElse;
-import static htsjdk.samtools.util.SequenceUtil.C;
-import static htsjdk.samtools.util.SequenceUtil.generateAllKmers;
-import static java.lang.Math.log10;
-import static picard.cmdline.StandardOptionDefinitions.MINIMUM_MAPPING_QUALITY_SHORT_NAME;
 
 /**
  * Class for trying to quantify the CpCG->CpCA error rate.
@@ -110,7 +104,7 @@ public class CollectOxoGMetrics extends CommandLineProgram {
             doc = "The minimum base quality score for a base to be included in analysis.")
     public int MINIMUM_QUALITY_SCORE = 20;
 
-    @Argument(shortName = MINIMUM_MAPPING_QUALITY_SHORT_NAME,
+    @Argument(shortName = StandardOptionDefinitions.MINIMUM_MAPPING_QUALITY_SHORT_NAME,
             doc = "The minimum mapping quality score for a base to be included in analysis.")
     public int MINIMUM_MAPPING_QUALITY = 30;
 
@@ -255,8 +249,8 @@ public class CollectOxoGMetrics extends CommandLineProgram {
         }
         
         for (final SAMReadGroupRecord rec : in.getFileHeader().getReadGroups()) {
-            samples.add(getOrElse(rec.getSample(), UNKNOWN_SAMPLE));
-            libraries.add(getOrElse(rec.getLibrary(), UNKNOWN_LIBRARY));
+            samples.add(Optional.ofNullable(rec.getSample()).orElse(UNKNOWN_SAMPLE));
+            libraries.add(Optional.ofNullable(rec.getLibrary()).orElse(UNKNOWN_LIBRARY));
         }
 
         // Setup the calculators
@@ -353,7 +347,7 @@ public class CollectOxoGMetrics extends CommandLineProgram {
     private Set<String> makeContextStrings(final int contextSize) {
         final Set<String> contexts = new HashSet<>();
 
-        for (final byte[] kmer : generateAllKmers(2 * contextSize + 1)) {
+        for (final byte[] kmer : SequenceUtil.generateAllKmers(2 * contextSize + 1)) {
             if (kmer[contextSize] == 'C') {
                 contexts.add(StringUtil.bytesToString(kmer));
             }
@@ -439,7 +433,7 @@ public class CollectOxoGMetrics extends CommandLineProgram {
              * assume that controlA is half the story, and remove the other half from oxidatedA.
              */
             m.OXIDATION_ERROR_RATE = Math.max(m.ALT_OXO_BASES - m.ALT_NONOXO_BASES, 1) / (double) m.TOTAL_BASES;
-            m.OXIDATION_Q = -10 * log10(m.OXIDATION_ERROR_RATE);
+            m.OXIDATION_Q = -10 * Math.log10(m.OXIDATION_ERROR_RATE);
 
             /** Now look for things that have a reference base bias! */
             m.C_REF_REF_BASES = this.refCcontrolC + this.refCoxidatedC;
@@ -452,8 +446,8 @@ public class CollectOxoGMetrics extends CommandLineProgram {
 
             m.C_REF_OXO_ERROR_RATE = Math.max(cRefErrorRate - gRefErrorRate, 1e-10);
             m.G_REF_OXO_ERROR_RATE = Math.max(gRefErrorRate - cRefErrorRate, 1e-10);
-            m.C_REF_OXO_Q = -10 * log10(m.C_REF_OXO_ERROR_RATE);
-            m.G_REF_OXO_Q = -10 * log10(m.G_REF_OXO_ERROR_RATE);
+            m.C_REF_OXO_Q = -10 * Math.log10(m.C_REF_OXO_ERROR_RATE);
+            m.G_REF_OXO_Q = -10 * Math.log10(m.G_REF_OXO_ERROR_RATE);
 
             return m;
         }
@@ -479,7 +473,7 @@ public class CollectOxoGMetrics extends CommandLineProgram {
 
                 // Skip if below qual, or if library isn't a match
                 if (qual < MINIMUM_QUALITY_SCORE) continue;
-                if (!this.library.equals(getOrElse(samrec.getReadGroup().getLibrary(), UNKNOWN_LIBRARY))) continue;
+                if (!this.library.equals(Optional.ofNullable(samrec.getReadGroup().getLibrary()).orElse(UNKNOWN_LIBRARY))) continue;
 
                 // Get the read base, and get it in "as read" orientation
                 final byte base = rec.getReadBase();
