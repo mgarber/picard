@@ -2,26 +2,19 @@ package picard.analysis.artifacts;
 
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.util.IOUtil;
-import htsjdk.samtools.util.QualityUtil;
 import htsjdk.samtools.util.SequenceUtil;
-import org.broadinstitute.barclay.help.DocumentedFeature;
-import picard.cmdline.CommandLineProgram;
-import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.argparser.Argument;
+import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.help.DocumentedFeature;
+import picard.analysis.CollectOxoGMetrics.CpcgMetrics;
+import picard.analysis.artifacts.SequencingArtifactMetrics.BaitBiasDetailMetrics;
+import picard.analysis.artifacts.SequencingArtifactMetrics.PreAdapterDetailMetrics;
+import picard.cmdline.CommandLineProgram;
 import picard.cmdline.StandardOptionDefinitions;
 import picard.cmdline.programgroups.Metrics;
-import picard.analysis.CollectOxoGMetrics.*;
-import picard.analysis.artifacts.SequencingArtifactMetrics.*;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static java.lang.Math.log10;
+import java.util.*;
 
 @CommandLineProgramProperties(
         summary = ConvertSequencingArtifactToOxoG.USAGE_SUMMARY + ConvertSequencingArtifactToOxoG.USAGE_DETAILS,
@@ -161,7 +154,7 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
 
                 // mimicking the calculation in oxoG
                 m.OXIDATION_ERROR_RATE = Math.max(m.ALT_OXO_BASES - m.ALT_NONOXO_BASES, 1) / (double) m.TOTAL_BASES;
-                m.OXIDATION_Q = -10 * log10(m.OXIDATION_ERROR_RATE);
+                m.OXIDATION_Q = -10 * Math.log10(m.OXIDATION_ERROR_RATE);
 
                 // extract fields from BaitBiasDetailMetrics
                 m.C_REF_REF_BASES = baitBiasFwd.FWD_CXT_REF_BASES;
@@ -175,8 +168,8 @@ static final String USAGE_DETAILS = "<p>This tool extracts 8-oxoguanine (OxoG) a
                 // mimicking the calculation in oxoG
                 m.C_REF_OXO_ERROR_RATE = Math.max(cRefErrorRate - gRefErrorRate, 1e-10);
                 m.G_REF_OXO_ERROR_RATE = Math.max(gRefErrorRate - cRefErrorRate, 1e-10);
-                m.C_REF_OXO_Q = -10 * log10(m.C_REF_OXO_ERROR_RATE);
-                m.G_REF_OXO_Q = -10 * log10(m.G_REF_OXO_ERROR_RATE);
+                m.C_REF_OXO_Q = -10 * Math.log10(m.C_REF_OXO_ERROR_RATE);
+                m.G_REF_OXO_Q = -10 * Math.log10(m.G_REF_OXO_ERROR_RATE);
 
                 // add it
                 oxogMetrics.add(m);
