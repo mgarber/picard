@@ -48,7 +48,7 @@ import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFHeader;
 import picard.cmdline.CommandLineProgram;
 import picard.cmdline.StandardOptionDefinitions;
-import picard.cmdline.programgroups.VcfOrBcf;
+import picard.cmdline.programgroups.VariantManipulationProgramGroup;
 
 /**
  * Takes the difference between two VCF files. Throws IllegalArgumentException if the two files are not 
@@ -66,7 +66,7 @@ import picard.cmdline.programgroups.VcfOrBcf;
         summary = "Outputs records that are present in the first file but not the second. VCFs need to be sorted and indexed."
         		+ " An index file is created and a sequence dictionary is required by default.",
         oneLineSummary = "Takes the difference between two VCF files",
-        programGroup = VcfOrBcf.class)
+        programGroup = VariantManipulationProgramGroup.class)
 @DocumentedFeature
 
 
