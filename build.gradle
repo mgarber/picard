@@ -48,20 +48,34 @@ jacoco {
     toolVersion = "0.7.5.201505241946"
 }
 
-final htsjdkVersion = System.getProperty('htsjdk.version', '2.13.1')
+final htsjdkVersion = System.getProperty('htsjdk.version', '2.14.3')
+
+// We use a custom shaded build of the NIO library to avoid a regression in the authentication layer.
+// GATK does the same, see https://github.com/broadinstitute/gatk/issues/3591
+final googleNio = 'org.broadinstitute:google-cloud-nio-GATK4-custom-patch:0.20.4-alpha-GCS-RETRY-FIX:shaded'
 
 // Get the jdk files we need to run javaDoc. We need to use these during compile, testCompile,
 // test execution, and gatkDoc generation, but we don't want them as part of the runtime
 // classpath and we don't want to redistribute them in the uber jar.
 final javadocJDKFiles = files(((URLClassLoader) ToolProvider.getSystemToolClassLoader()).getURLs())
 
+configurations {
+    cloudConfiguration {
+        extendsFrom runtime
+        dependencies {
+            cloudConfiguration(googleNio)
+        }
+    }
+}
+
 dependencies {
-    compile('com.intel.gkl:gkl:0.5.3') {
+    compile('com.intel.gkl:gkl:0.8.2') {
         exclude module: 'htsjdk'
     }
     compile 'com.google.guava:guava:15.0'
     compile 'com.github.samtools:htsjdk:' + htsjdkVersion
-    compile 'org.broadinstitute:barclay:1.1.0'
+    compile 'org.broadinstitute:barclay:2.0.0'
+    compileOnly googleNio
 
     // javadoc utilities; compile/test only to prevent redistribution of sdk jars
     compileOnly(javadocJDKFiles)
@@ -192,6 +206,15 @@ shadowJar {
         }
     }
 }
+
+
+
+task cloudJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar)  {
+    configurations = [project.configurations.cloudConfiguration]
+    from project.sourceSets.main.output
+    archiveName 'picardcloud.jar'
+}
+
 
 // Create picardBarclay.jar, which is a identical to picard.jar, but contains a .properties
 // file that tells Picard to use the Barclay command line parser instead of the Picard

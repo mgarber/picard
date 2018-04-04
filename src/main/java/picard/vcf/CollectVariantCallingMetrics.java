@@ -38,7 +38,7 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.analysis.MergeableMetricBase;
 import picard.cmdline.CommandLineProgram;
 import picard.cmdline.StandardOptionDefinitions;
-import picard.cmdline.programgroups.Metrics;
+import picard.cmdline.programgroups.DiagnosticsAndQCProgramGroup;
 import picard.util.DbSnpBitSetUtil;
 import picard.vcf.processor.VariantProcessor;
 
@@ -50,7 +50,7 @@ import java.util.Optional;
 @CommandLineProgramProperties(
         summary = "Collects per-sample and aggregate (spanning all samples) metrics from the provided VCF file.",
         oneLineSummary = "Collects per-sample and aggregate (spanning all samples) metrics from the provided VCF file",
-        programGroup = Metrics.class
+        programGroup = DiagnosticsAndQCProgramGroup.class
 )
 @DocumentedFeature
 public class CollectVariantCallingMetrics extends CommandLineProgram {
@@ -89,7 +89,7 @@ public class CollectVariantCallingMetrics extends CommandLineProgram {
         IOUtil.assertFileIsReadable(INPUT);
         IOUtil.assertFileIsReadable(DBSNP);
         if (TARGET_INTERVALS != null) IOUtil.assertFileIsReadable(TARGET_INTERVALS);
-        if (SEQUENCE_DICTIONARY != null) IOUtil.assertFileIsReadable(SEQUENCE_DICTIONARY);
+        if (SEQUENCE_DICTIONARY != null) IOUtil.assertFileIsReadable(SEQUENCE_DICTIONARY.toPath());
 
         final boolean requiresIndex = this.TARGET_INTERVALS != null || this.THREAD_COUNT > 1;
         final VCFFileReader variantReader = new VCFFileReader(INPUT, requiresIndex);
@@ -97,7 +97,7 @@ public class CollectVariantCallingMetrics extends CommandLineProgram {
         CloserUtil.close(variantReader);
 
         final SAMSequenceDictionary sequenceDictionary =
-                SAMSequenceDictionaryExtractor.extractDictionary(SEQUENCE_DICTIONARY == null ? INPUT : SEQUENCE_DICTIONARY);
+                SAMSequenceDictionaryExtractor.extractDictionary(SEQUENCE_DICTIONARY == null ? INPUT.toPath() : SEQUENCE_DICTIONARY.toPath());
 
         final IntervalList targetIntervals = (TARGET_INTERVALS == null) ? null : IntervalList.fromFile(TARGET_INTERVALS).uniqued();
 

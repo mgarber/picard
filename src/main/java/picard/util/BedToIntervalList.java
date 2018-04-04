@@ -22,7 +22,7 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.PicardException;
 import picard.cmdline.CommandLineProgram;
 import picard.cmdline.StandardOptionDefinitions;
-import picard.cmdline.programgroups.Intervals;
+import picard.cmdline.programgroups.IntervalsManipulationProgramGroup;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +33,7 @@ import java.io.IOException;
 @CommandLineProgramProperties(
         summary = BedToIntervalList.USAGE_SUMMARY + BedToIntervalList.USAGE_DETAILS,
         oneLineSummary = BedToIntervalList.USAGE_SUMMARY,
-        programGroup = Intervals.class
+        programGroup = IntervalsManipulationProgramGroup.class
 )
 @DocumentedFeature
 public class BedToIntervalList extends CommandLineProgram {
@@ -117,7 +117,7 @@ public class BedToIntervalList extends CommandLineProgram {
         try {
             // create a new header that we will assign the dictionary provided by the SAMSequenceDictionaryExtractor to.
             final SAMFileHeader header = new SAMFileHeader();
-            final SAMSequenceDictionary samSequenceDictionary = SAMSequenceDictionaryExtractor.extractDictionary(SEQUENCE_DICTIONARY);
+            final SAMSequenceDictionary samSequenceDictionary = SAMSequenceDictionaryExtractor.extractDictionary(SEQUENCE_DICTIONARY.toPath());
             header.setSequenceDictionary(samSequenceDictionary);
             // set the sort order to be sorted by coordinate, which is actually done below
             // by getting the .uniqued() intervals list before we write out the file

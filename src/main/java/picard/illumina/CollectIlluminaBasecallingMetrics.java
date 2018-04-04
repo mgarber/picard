@@ -32,10 +32,9 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.PicardException;
 import picard.cmdline.CommandLineProgram;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
-import picard.cmdline.programgroups.Illumina;
 import org.broadinstitute.barclay.argparser.Argument;
 import picard.cmdline.StandardOptionDefinitions;
-import picard.cmdline.programgroups.Illumina;
+import picard.cmdline.programgroups.BaseCallingProgramGroup;
 import picard.illumina.parser.BaseIlluminaDataProvider;
 import picard.illumina.parser.ClusterData;
 import picard.illumina.parser.IlluminaDataProviderFactory;
@@ -78,7 +77,7 @@ import java.util.stream.Collectors;
 @CommandLineProgramProperties(
         summary = CollectIlluminaBasecallingMetrics.USAGE_SUMMARY + CollectIlluminaBasecallingMetrics.USAGE_DETAILS,
         oneLineSummary = CollectIlluminaBasecallingMetrics.USAGE_SUMMARY,
-        programGroup = Illumina.class
+        programGroup = BaseCallingProgramGroup.class
 )
 @DocumentedFeature
 public class CollectIlluminaBasecallingMetrics extends CommandLineProgram {
@@ -218,6 +217,7 @@ public class CollectIlluminaBasecallingMetrics extends CommandLineProgram {
     }
 
     private void setupNewDataProvider(final IlluminaDataProviderFactory factory) {
+        if (BARCODES_DIR == null) BARCODES_DIR = BASECALLS_DIR;
         final File laneDir = new File(BASECALLS_DIR, IlluminaFileUtil.longLaneStr(LANE));
 
         final File[] cycleDirs = IOUtil.getFilesMatchingRegexp(laneDir, IlluminaFileUtil.CYCLE_SUBDIRECTORY_PATTERN);
@@ -250,11 +250,10 @@ public class CollectIlluminaBasecallingMetrics extends CommandLineProgram {
 
         IOUtil.assertFilesAreReadable(Arrays.asList(filterFiles));
         final Pattern barcodeRegex = Pattern.compile(ParameterizedFileUtil.escapePeriods(
-                ParameterizedFileUtil.makeLaneTileRegex("_barcode.txt", LANE)));
-
+                ParameterizedFileUtil.makeBarcodeRegex(LANE)));
 
         final Map<Integer, File> barcodesFiles = new HashMap<>();
-        for (final File barcodeFile : NewIlluminaBasecallsConverter.getTiledFiles(laneDir, barcodeRegex)) {
+        for (final File barcodeFile : NewIlluminaBasecallsConverter.getTiledFiles(BARCODES_DIR, barcodeRegex)) {
             final Matcher tileMatcher = barcodeRegex.matcher(barcodeFile.getName());
             if (tileMatcher.matches()) {
                 IOUtil.assertFileIsReadable(barcodeFile);

@@ -42,7 +42,7 @@ import org.broadinstitute.barclay.help.DocumentedFeature;
 import picard.cmdline.CommandLineProgram;
 import picard.cmdline.StandardOptionDefinitions;
 import picard.cmdline.argumentcollections.ReferenceArgumentCollection;
-import picard.cmdline.programgroups.VcfOrBcf;
+import picard.cmdline.programgroups.VariantManipulationProgramGroup;
 import picard.util.LiftoverUtils;
 
 import java.io.File;
@@ -51,40 +51,90 @@ import java.text.NumberFormat;
 import java.util.*;
 
 /**
- * Tool for lifting over a VCF to another genome build and producing a properly header'd,
+ * <h3>Summary</h3>
+ * Tool for "lifting over" a VCF from one genome build to another, producing a properly headered,
  * sorted and indexed VCF in one go.
+ *
+ * <h3>Details</h3>
+ * This tool adjusts the coordinates of variants within a VCF file to match a new reference. The
+ * output file will be sorted and indexed using the target reference build. To be clear, {@link #REFERENCE_SEQUENCE} should be the
+ * <em>target</em> reference build (that is, the "new" one). The tool is based on the <a href="http://genome.ucsc.edu/cgi-bin/hgLiftOver">UCSC LiftOver tool</a>
+ * and uses a UCSC chain file to guide its operation. <br />
+ *
+ * For each variant, the tool will look for the target coordinate, reverse-complement and left-align the variant if needed,
+ * and, in the case that the reference and alternate alleles of a SNP have been swapped in the new genome build, it will
+ * adjust the SNP, and correct AF-like INFO fields and the relevant genotypes.
+ * <br />
+ *
+ * <h3>Example</h3>
+ * <pre>
+ * java -jar picard.jar LiftoverVcf \\
+ *     I=input.vcf \\
+ *     O=lifted_over.vcf \\
+ *     CHAIN=b37tohg38.chain \\
+ *     REJECT=rejected_variants.vcf \\
+ *     R=reference_sequence.fasta
+ * </pre>
+ * <h3>Caveats</h3>
+ * <h4>Rejected Records</h4>
+ * Records may be rejected because they cannot be lifted over or because of sequence incompatibilities between the
+ * source and target reference genomes.  Rejected records will be emitted to the {@link #REJECT} file using the source
+ * genome build coordinates. The reason for the rejection will be stated in the FILTER field, and more detail may be placed
+ * in the INFO field.
+ * <h4>Memory Use</h4>
+ * LiftOverVcf sorts the output using a {@link htsjdk.samtools.util.SortingCollection} which relies on {@link #MAX_RECORDS_IN_RAM}
+ * to specify how many (vcf) records to hold in memory before "spilling" to disk. The default value is reasonable when sorting SAM files,
+ * but not for VCFs as there is no good default due to the dependence on the number of samples and amount of information in the INFO and FORMAT
+ * fields. Consider lowering to 100,000 or even less if you have many genotypes.
  *
  * @author Tim Fennell
  */
 @CommandLineProgramProperties(
         summary = LiftoverVcf.USAGE_SUMMARY + LiftoverVcf.USAGE_DETAILS,
         oneLineSummary = LiftoverVcf.USAGE_SUMMARY,
-        programGroup = VcfOrBcf.class)
+        programGroup = VariantManipulationProgramGroup.class)
 @DocumentedFeature
 public class LiftoverVcf extends CommandLineProgram {
     static final String USAGE_SUMMARY = "Lifts over a VCF file from one reference build to another.  ";
-    static final String USAGE_DETAILS = "This tool adjusts the coordinates of variants within a VCF file to match a new reference. The " +
+    static final String USAGE_DETAILS = "<h3>Summary</h3>\n" +
+            "Tool for \"lifting over\" a VCF from one genome build to another, producing a properly headered, " +
+            "sorted and indexed VCF in one go.\n" +
+            "\n" +
+            "<h3>Details</h3>\n" +
+            "This tool adjusts the coordinates of variants within a VCF file to match a new reference. The " +
             "output file will be sorted and indexed using the target reference build. To be clear, REFERENCE_SEQUENCE should be the " +
-            "<em>target</em> reference build. The tool is based on the UCSC liftOver tool (see: http://genome.ucsc.edu/cgi-bin/hgLiftOver) " +
-            "and uses a UCSC chain file to guide its operation. <br /><br />" +
-            "Note that records may be rejected because they cannot be lifted over or because of sequence incompatibilities between the " +
-            "source and target reference genomes.  Rejected records will be emitted with filters to the REJECT file, using the source " +
-            "genome coordinates.<br />" +
-            "<h4>Usage example:</h4>" +
-            "<pre>" +
-            "java -jar picard.jar LiftoverVcf \\<br />" +
-            "     I=input.vcf \\<br />" +
-            "     O=lifted_over.vcf \\<br />" +
-            "     CHAIN=b37tohg19.chain \\<br />" +
-            "     REJECT=rejected_variants.vcf \\<br />" +
-            "     R=reference_sequence.fasta" +
-            "</pre>" +
-            "For additional information, please see: http://genome.ucsc.edu/cgi-bin/hgLiftOver" +
-            "<hr />";
+            "<em>target</em> reference build (that is, the \"new\" one). The tool is based on the UCSC LiftOver tool (see http://genome.ucsc.edu/cgi-bin/hgLiftOver) " +
+            "and uses a UCSC chain file to guide its operation.\n" +
+            "\n" +
+            "For each variant, the tool will look for the target coordinate, reverse-complement and left-align the variant if needed, " +
+            "and, in the case that the reference and alternate alleles of a SNP have been swapped in the new genome build, it will " +
+            "adjust the SNP, and correct AF-like INFO fields and the relevant genotypes." +
+            "\n" +
+            "\n" +
+            "<h3>Example</h3>\n" +
+            "java -jar picard.jar LiftoverVcf \\\n" +
+            "    I=input.vcf \\\n" +
+            "    O=lifted_over.vcf \\\n" +
+            "    CHAIN=b37tohg38.chain \\\n" +
+            "    REJECT=rejected_variants.vcf \\\n" +
+            "    R=reference_sequence.fasta\n" +
+            "\n" +
+            "<h3>Caveats</h3>\n" +
+            "<h4>Rejected Records</h4>\n" +
+            "Records may be rejected because they cannot be lifted over or because of sequence incompatibilities between the " +
+            "source and target reference genomes.  Rejected records will be emitted to the REJECT file using the source " +
+            "genome build coordinates. The reason for the rejection will be stated in the FILTER field, and more detail may be placed " +
+            "in the INFO field.\n" +
+            "<h4>Memory Use</h4>\n" +
+            "LiftOverVcf sorts the output using a \"SortingCollection\" which relies on MAX_RECORDS_IN_RAM " +
+            "to specify how many (vcf) records to hold in memory before \"spilling\" to disk. The default value is reasonable when sorting SAM files, " +
+            "but not for VCFs as there is no good default due to the dependence on the number of samples and amount of information in the INFO and FORMAT " +
+            "fields. Consider lowering to 100,000 or even less if you have many genotypes.\n";
+
     @Argument(shortName = StandardOptionDefinitions.INPUT_SHORT_NAME, doc = "The input VCF/BCF file to be lifted over.")
     public File INPUT;
 
-    @Argument(shortName = StandardOptionDefinitions.OUTPUT_SHORT_NAME, doc = "The output location to write the lifted over VCF/BCF to.")
+    @Argument(shortName = StandardOptionDefinitions.OUTPUT_SHORT_NAME, doc = "The output location for the lifted over VCF/BCF.")
     public File OUTPUT;
 
     @Argument(shortName = "C", doc = "The liftover chain file. See https://genome.ucsc.edu/goldenPath/help/chain.html for a description" +
@@ -98,6 +148,9 @@ public class LiftoverVcf extends CommandLineProgram {
     @Argument(shortName = "WMC", doc = "Warn on missing contig.", optional = true)
     public boolean WARN_ON_MISSING_CONTIG = false;
 
+    @Argument(shortName = "LFI", doc = "If true, intervals failing due to match below LIFTOVER_MIN_MATCH will be logged as a warning to the console.", optional = true)
+    public boolean LOG_FAILED_INTERVALS = true;
+
     // Option on whether or not to write the original contig/position of the variant to the INFO field
     @Argument(doc = "Write the original contig/position for lifted variants to the INFO field.", optional = true)
     public boolean WRITE_ORIGINAL_POSITION = false;
@@ -110,10 +163,10 @@ public class LiftoverVcf extends CommandLineProgram {
 
     @Argument(doc = "INFO field annotations that behave like an Allele Frequency and should be transformed with x->1-x " +
             "when swapping reference with variant alleles.", optional = true)
-    public Collection<String> TAGS_TO_REVERSE = LiftoverUtils.DEFAULT_TAGS_TO_REVERSE;
+    public Collection<String> TAGS_TO_REVERSE = new ArrayList<>(LiftoverUtils.DEFAULT_TAGS_TO_REVERSE);
 
     @Argument(doc = "INFO field annotations that should be deleted when swapping reference with variant alleles.", optional = true)
-    public Collection<String> TAGS_TO_DROP = LiftoverUtils.DEFAULT_TAGS_TO_DROP;
+    public Collection<String> TAGS_TO_DROP = new ArrayList<>(LiftoverUtils.DEFAULT_TAGS_TO_DROP);
 
     // When a contig used in the chain is not in the reference, exit with this value instead of 0.
     public static int EXIT_CODE_WHEN_CONTIG_NOT_IN_REFERENCE = 1;
@@ -146,7 +199,7 @@ public class LiftoverVcf extends CommandLineProgram {
             new VCFFilterHeaderLine(FILTER_CANNOT_LIFTOVER_INDEL, "Indel falls into a reverse complemented region in the target genome."),
             new VCFFilterHeaderLine(FILTER_NO_TARGET, "Variant could not be lifted between genome builds."),
             new VCFFilterHeaderLine(FILTER_MISMATCHING_REF_ALLELE, "Reference allele does not match reference genome sequence after liftover."),
-            new VCFFilterHeaderLine(FILTER_INDEL_STRADDLES_TWO_INTERVALS, "Indel is straddling multiple intervalss in the chain, and so the results are not well defined.")
+            new VCFFilterHeaderLine(FILTER_INDEL_STRADDLES_TWO_INTERVALS, "Reference allele in Indel is straddling multiple intervals in the chain, and so the results are not well defined.")
     );
 
     /**
@@ -177,13 +230,16 @@ public class LiftoverVcf extends CommandLineProgram {
     private SortingCollection<VariantContext> sorter;
 
     private long failedLiftover = 0, failedAlleleCheck = 0;
+    private Map<String, Long> rejectsByContig = new TreeMap<>();
+    private Map<String, Long> liftedByDestContig = new TreeMap<>();
+    private Map<String, Long> liftedBySourceContig = new TreeMap<>();
 
     @Override
     protected ReferenceArgumentCollection makeReferenceArgumentCollection() {
         return new ReferenceArgumentCollection() {
             @Argument(shortName = StandardOptionDefinitions.REFERENCE_SHORT_NAME, common=false,
-                    doc = "The reference sequence (fasta) for the TARGET genome build.  The fasta file must have an " +
-                            "accompanying sequence dictionary (.dict file).")
+                    doc = "The reference sequence (fasta) for the TARGET genome build (i.e., the new one.  The fasta file must have an " +
+                                "accompanying sequence dictionary (.dict file).")
             public File REFERENCE_SEQUENCE = Defaults.REFERENCE_FASTA;
 
             @Override
@@ -191,11 +247,6 @@ public class LiftoverVcf extends CommandLineProgram {
                 return REFERENCE_SEQUENCE;
             }
         };
-    }
-
-    // Stock main method
-    public static void main(final String[] args) {
-        new LiftoverVcf().instanceMainWithExit(args);
     }
 
     @Override
@@ -210,6 +261,8 @@ public class LiftoverVcf extends CommandLineProgram {
         // Setup the inputs
         ////////////////////////////////////////////////////////////////////////
         final LiftOver liftOver = new LiftOver(CHAIN);
+        liftOver.setShouldLogFailedIntervalsBelowThreshold(LOG_FAILED_INTERVALS);
+
         final VCFFileReader in = new VCFFileReader(INPUT, false);
 
         log.info("Loading up the target reference genome.");
@@ -235,6 +288,9 @@ public class LiftoverVcf extends CommandLineProgram {
                 "It is possible that not all INFO annotations reflect this swap, and in the genotypes, " +
                 "only the GT, PL, and AD fields have been modified. You should check the TAGS_TO_REVERSE parameter that was used " +
                         "during the LiftOver to be sure."));
+        outHeader.addMetaDataLine(new VCFInfoHeaderLine(LiftoverUtils.REV_COMPED_ALLELES, 0, VCFHeaderLineType.Flag,
+                "The REF and the ALT alleles have been reverse complemented in liftover since the mapping from the " +
+                        "previous reference to the current one was on the negative strand."));
 
         final VariantContextWriter out = new VariantContextWriterBuilder()
                 .setOption(Options.INDEX_ON_THE_FLY)
@@ -310,8 +366,9 @@ public class LiftoverVcf extends CommandLineProgram {
                 refSeq = refSeqs.get(target.getContig());
 
                 final VariantContext liftedVC = LiftoverUtils.liftVariant(ctx, target, refSeq, WRITE_ORIGINAL_POSITION);
+                // the liftedVC can be null if the liftover fails because of a problem with reverse complementing
                 if (liftedVC == null) {
-                    throw new IllegalArgumentException("Unexpectedly found null VC. This should have not happened.");
+                    rejectVariant(ctx, FILTER_CANNOT_LIFTOVER_INDEL);
                 } else {
                     tryToAddVariant(liftedVC, refSeq, ctx);
                 }
@@ -325,6 +382,27 @@ public class LiftoverVcf extends CommandLineProgram {
         log.info(failedLiftover, " variants failed to liftover.");
         log.info(failedAlleleCheck, " variants lifted over but had mismatching reference alleles after lift over.");
         log.info(pct, " of variants were not successfully lifted over and written to the output.");
+
+        final Set<String> contigUnion = new TreeSet<>();
+        contigUnion.addAll(liftedBySourceContig.keySet());
+        contigUnion.addAll(rejectsByContig.keySet());
+
+        log.info("liftover success by source contig:");
+        for (String contig : contigUnion) {
+            final long success = liftedBySourceContig.getOrDefault(contig, 0L);
+            final long fail = rejectsByContig.getOrDefault(contig, 0L);
+            final String liftPct = pfmt.format((double)success / (double)(success + fail));
+
+            log.info(contig, ": ", success, " / ", (success + fail), " (", liftPct, ")");
+        }
+
+        log.info("lifted variants by target contig:");
+        for (String contig : liftedByDestContig.keySet()) {
+            log.info(contig, ": ", liftedByDestContig.get(contig));
+        }
+        if (liftedByDestContig.isEmpty()) {
+            log.info("no successfully lifted variants");
+        }
 
         rejects.close();
         in.close();
@@ -350,6 +428,16 @@ public class LiftoverVcf extends CommandLineProgram {
     private void rejectVariant(final VariantContext ctx, final String reason) {
         rejects.add(new VariantContextBuilder(ctx).filter(reason).make());
         failedLiftover++;
+        trackLiftedVariantContig(rejectsByContig, ctx.getContig());
+    }
+
+    private void trackLiftedVariantContig(Map<String, Long> map, String contig) {
+        Long val = map.get(contig);
+        if (val == null) {
+            val = 0L;
+        }
+
+        map.put(contig, ++val);
     }
 
     /**
@@ -391,7 +479,10 @@ public class LiftoverVcf extends CommandLineProgram {
                     .attribute(ATTEMPTED_LOCUS, String.format("%s:%d-%d", vc.getContig(), vc.getStart(), vc.getEnd()))
                     .make());
             failedAlleleCheck++;
+            trackLiftedVariantContig(rejectsByContig, source.getContig());
         } else {
+            trackLiftedVariantContig(liftedBySourceContig, source.getContig());
+            trackLiftedVariantContig(liftedByDestContig, vc.getContig());
             sorter.add(vc);
         }
     }

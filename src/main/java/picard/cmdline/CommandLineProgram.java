@@ -51,6 +51,7 @@ import org.broadinstitute.barclay.argparser.SpecialArgumentsCollection;
 import picard.cmdline.argumentcollections.OptionalReferenceArgumentCollection;
 import picard.cmdline.argumentcollections.ReferenceArgumentCollection;
 import picard.cmdline.argumentcollections.RequiredReferenceArgumentCollection;
+import picard.nio.PathHelper;
 import picard.util.PropertyUtils;
 
 import java.io.File;
@@ -89,7 +90,7 @@ public abstract class CommandLineProgram {
 
     @Argument(doc="One or more directories with space available to be used by this program for temporary storage of working files",
             common=true, optional=true)
-    public List<File> TMP_DIR = new ArrayList<File>();
+    public List<File> TMP_DIR = new ArrayList<>();
 
     @Argument(doc = "Control verbosity of logging.", common=true)
     public Log.LogLevel VERBOSITY = Log.LogLevel.INFO;
@@ -102,10 +103,11 @@ public abstract class CommandLineProgram {
             "do not otherwise need to be decoded.", common=true)
     public ValidationStringency VALIDATION_STRINGENCY = ValidationStringency.DEFAULT_STRINGENCY;
 
-    @Argument(doc = "Compression level for all compressed files created (e.g. BAM and GELI).", common=true)
+    @Argument(doc = "Compression level for all compressed files created (e.g. BAM and VCF).", common=true)
     public int COMPRESSION_LEVEL = Defaults.COMPRESSION_LEVEL;
 
-    @Argument(doc = "When writing SAM files that need to be sorted, this will specify the number of records stored in RAM before spilling to disk. Increasing this number reduces the number of file handles needed to sort a SAM file, and increases the amount of RAM needed.", optional=true, common=true)
+    @Argument(doc = "When writing files that need to be sorted, this will specify the number of records stored in RAM before spilling to disk. " +
+            "Increasing this number reduces the number of file handles needed to sort the file, and increases the amount of RAM needed.", optional=true, common=true)
     public Integer MAX_RECORDS_IN_RAM = SAMFileWriterImpl.getDefaultMaxRecordsInRam();
 
     @Argument(doc = "Whether to create a BAM index when writing a coordinate-sorted BAM file.", common=true)
@@ -158,7 +160,7 @@ public abstract class CommandLineProgram {
     */
     private CommandLineParser commandLineParser;
 
-    private final List<Header> defaultHeaders = new ArrayList<Header>();
+    private final List<Header> defaultHeaders = new ArrayList<>();
 
     /**
     * The reconstructed commandline used to run this program. Used for logging
@@ -198,7 +200,7 @@ public abstract class CommandLineProgram {
         }
 
         // Provide one temp directory if the caller didn't
-        if (this.TMP_DIR == null) this.TMP_DIR = new ArrayList<File>();
+        if (this.TMP_DIR == null) this.TMP_DIR = new ArrayList<>();
         if (this.TMP_DIR.isEmpty()) TMP_DIR.add(IOUtil.getDefaultTmpDir());
 
         // Build the default headers
@@ -242,21 +244,33 @@ public abstract class CommandLineProgram {
             System.setProperty("java.io.tmpdir", f.getAbsolutePath()); // in loop so that last one takes effect
         }
 
+        PathHelper.initilizeAll();
+
         if (!QUIET) {
             System.err.println("[" + new Date() + "] " + commandLine);
 
             // Output a one liner about who/where and what software/os we're running on
             try {
+                final StringBuilder pathProvidersBuilder = new StringBuilder();
+
+                for (PathHelper.PathProviders providers : PathHelper.PathProviders.values()) {
+                    pathProvidersBuilder.append(String.format("Provider %s is%s available; ",
+                            providers.name(), providers.isAvailable() ? "" : " not"));
+                }
+                final int lastSpacePos = pathProvidersBuilder.lastIndexOf(" ");
+                pathProvidersBuilder.delete(lastSpacePos, lastSpacePos + 1);
+
                 final boolean usingIntelDeflater = (BlockCompressedOutputStream.getDefaultDeflaterFactory() instanceof IntelDeflaterFactory &&
                         ((IntelDeflaterFactory)BlockCompressedOutputStream.getDefaultDeflaterFactory()).usingIntelDeflater());
                 final boolean usingIntelInflater = (BlockGunzipper.getDefaultInflaterFactory() instanceof IntelInflaterFactory &&
                         ((IntelInflaterFactory)BlockGunzipper.getDefaultInflaterFactory()).usingIntelInflater());
                 final String msg = String.format(
-                    "[%s] Executing as %s@%s on %s %s %s; %s %s; Deflater: %s; Inflater: %s; Picard version: %s",
+                    "[%s] Executing as %s@%s on %s %s %s; %s %s; Deflater: %s; Inflater: %s; %s Picard version: %s",
                     new Date(), System.getProperty("user.name"), InetAddress.getLocalHost().getHostName(),
                     System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"),
                     System.getProperty("java.vm.name"), System.getProperty("java.runtime.version"),
                     usingIntelDeflater ? "Intel" : "Jdk", usingIntelInflater ? "Intel" : "Jdk",
+                    pathProvidersBuilder.toString(),
                     getCommandLineParser().getVersion());
                 System.err.println(msg);
             }
@@ -333,7 +347,7 @@ public abstract class CommandLineProgram {
 
     /** Gets a MetricsFile with default headers already written into it. */
     protected <A extends MetricBase,B extends Comparable<?>> MetricsFile<A,B> getMetricsFile() {
-        final MetricsFile<A,B> file = new MetricsFile<A,B>();
+        final MetricsFile<A,B> file = new MetricsFile<>();
         for (final Header h : this.defaultHeaders) {
             file.addHeader(h);
         }

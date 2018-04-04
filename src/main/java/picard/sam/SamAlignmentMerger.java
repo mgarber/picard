@@ -189,7 +189,7 @@ public class SamAlignmentMerger extends AbstractAlignmentMerger {
 
     @Override
     protected SAMSequenceDictionary getDictionaryForMergedBam() {
-        SAMSequenceDictionary referenceDict = SAMSequenceDictionaryExtractor.extractDictionary(referenceFasta);
+        SAMSequenceDictionary referenceDict = SAMSequenceDictionaryExtractor.extractDictionary(referenceFasta.toPath());
         if (referenceDict == null) {
             throw new PicardException("No sequence dictionary found for " + referenceFasta.getAbsolutePath() +
                     ".  Use Picard's CreateSequenceDictionary to create a sequence dictionary.");
@@ -379,7 +379,7 @@ public class SamAlignmentMerger extends AbstractAlignmentMerger {
     }
 
     /**
-     * For now, we only ignore those alignments that have more than {@link maxGaps} insertions
+     * For now, we ignore only those alignments that have more than {@link #maxGaps} insertions
      * or deletions.
      */
     protected boolean ignoreAlignment(final SAMRecord sam) {
