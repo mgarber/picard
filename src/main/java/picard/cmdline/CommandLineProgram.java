@@ -279,7 +279,7 @@ public abstract class CommandLineProgram {
                 }
             }
             catch (Throwable e) {
-                // do nothing
+            	e.printStackTrace(System.err);
             }
         }
         return ret;
